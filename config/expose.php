@@ -14,7 +14,7 @@ return [
     */
     'servers' => [
         'main' => [
-            'host' => 'sharedwithexpose.com',
+            'host' => 'tunnel.synergi.tech',
             'port' => 443,
         ],
     ],
