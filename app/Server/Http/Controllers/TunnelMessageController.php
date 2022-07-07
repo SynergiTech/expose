@@ -84,7 +84,7 @@ class TunnelMessageController extends Controller
 
     protected function sendRequestToClient(Request $request, ControlConnection $controlConnection, ConnectionInterface $httpConnection)
     {
-        $request = $this->prepareRequest($request, $controlConnection);
+        $request = $this->prepareRequest($request, $controlConnection, $httpConnection);
 
         $requestId = $request->header('X-Expose-Request-ID');
 
@@ -118,9 +118,9 @@ class TunnelMessageController extends Controller
         return $request;
     }
 
-    protected function prepareRequest(Request $request, ControlConnection $controlConnection): Request
+    protected function prepareRequest(Request $request, ControlConnection $controlConnection, ConnectionInterface $httpConnection): Request
     {
-        $request::setTrustedProxies(['REMOTE_ADDR', $controlConnection->socket->remoteAddress, '127.0.0.1'], Request::HEADER_X_FORWARDED_ALL);
+        $request::setTrustedProxies([$httpConnection->remoteAddress, '127.0.0.1'], Request::HEADER_X_FORWARDED_ALL);
 
         $host = $controlConnection->serverHost;
 
