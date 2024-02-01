@@ -2,6 +2,8 @@
 <head>
     <title>Expose Dashboard :: {{ subdomains|join(", ") }}</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-json-viewer@2.2.15/vue-json-viewer.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue-json-viewer@2.2.22/style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -150,7 +152,7 @@
                 </div>
                 <div class="flex items-center pb-4 justify-between">
                     <span
-                        @click.prevent="followLogs = !followLogs"
+                        @click.prevent="setFollowLogs(!followLogs)"
                         class="mr-3 cursor-pointer" id="annual-billing-label">
                         <span class="text-sm font-medium dark:text-gray-200 text-gray-900">Follow Requests:</span>
                    </span>
@@ -159,7 +161,7 @@
                                 'bg-pink-500': followLogs,
                                 'dark:bg-gray-700 bg-gray-200': ! followLogs,
                             }"
-                            @click.prevent="followLogs = !followLogs"
+                            @click.prevent="setFollowLogs(!followLogs)"
                             class=" relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500" role="switch" aria-checked="false" aria-labelledby="annual-billing-label">
                         <span class="sr-only">Follow Request</span>
                         <!-- Enabled: "translate-x-5", Not Enabled: "translate-x-0" -->
@@ -167,6 +169,28 @@
                               :class="{
                                   'translate-x-5': followLogs,
                                   'translate-x-0': ! followLogs,
+                                    }"
+                              class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200"></span>
+                    </button>
+                </div>
+                <div class="flex items-center pb-4 justify-between">
+                    <span
+                        @click.prevent="setSideBySide(!sideBySide)"
+                        class="mr-3 cursor-pointer" id="annual-billing-label">
+                        <span class="text-sm font-medium dark:text-gray-200 text-gray-900">Show Request/Response in individual tabs:</span>
+                   </span>
+                    <button type="button"
+                            :class="{
+                                'bg-pink-500': sideBySide,
+                                'dark:bg-gray-700 bg-gray-200': ! sideBySide,
+                            }"
+                            @click.prevent="setSideBySide(!sideBySide)"
+                            class=" relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500" role="switch" aria-checked="false" aria-labelledby="annual-billing-label">
+                        <span class="sr-only">Follow Request</span>
+                        <span aria-hidden="true"
+                              :class="{
+                                  'translate-x-5': sideBySide,
+                                  'translate-x-0': ! sideBySide,
                                     }"
                               class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200"></span>
                     </button>
@@ -310,7 +334,11 @@
                     </div>
                 </div>
                 <div>
-                    <div class="hidden sm:block">
+                    <div
+                        :class="{
+                            'hidden' : sideBySide,
+                        }"
+                        class="sm:block">
                         <div class="border-b border-gray-200 dark:border-gray-700">
                             <nav class="-mb-px flex">
                                 <a href="#"
@@ -319,16 +347,17 @@
                                         'dark:bg-gray-900 dark:border-pink-500 border-indigo-500 dark:text-pink-500 text-indigo-600 dark:focus:text-pink-400 focus:text-indigo-800 dark:focus:border-pink-400 focus:border-indigo-700': view === 'request',
                                         'border-border-transparent dark:text-gray-200 text-gray-500 dark:hover:text-gray-100 hover:text-gray-700 hover:border-gray-300 focus:text-gray-700 focus:border-gray-300': view === 'response',
                                    }"
-                                   class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 focus:outline-none">
+                                   class="flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 focus:outline-none">
                                     Request
                                 </a>
                                 <a href="#"
+                                   v-if="sideBySide"
                                    @click.prevent="setView('response')"
                                    :class="{
                                         'dark:bg-gray-900 dark:border-pink-500 border-indigo-500 dark:text-pink-500 text-indigo-600 dark:focus:text-pink-400 focus:text-indigo-800 dark:focus:border-pink-400 focus:border-indigo-700': view === 'response',
                                         'border-border-transparent dark:text-gray-200 text-gray-500 dark:hover:text-gray-100 hover:text-gray-700 hover:border-gray-300 focus:text-gray-700 focus:border-gray-300': view === 'request',
                                    }"
-                                   class="w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 focus:outline-none">
+                                   class="flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 focus:outline-none">
                                     Response
                                 </a>
                             </nav>
@@ -336,8 +365,8 @@
                     </div>
                 </div>
 
-                <div v-if="view === 'request'">
-                    <div class="px-4 py-5 border-b dark:border-gray-700 border-gray-200 sm:px-6 flex justify-between" v-if="Object.keys(currentLog.request.query).length > 0">
+                <div v-if="view === 'request' || ! sideBySide">
+                    <div class="px-4 py-5 border-b dark:border-gray-700 border-gray-200 sm:px-6 flex justify-between items-center" v-if="Object.keys(currentLog.request.query).length > 0">
                         <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
                             Query Parameters
                         </h3>
@@ -360,10 +389,24 @@
                         </dd>
                     </div>
 
-                    <div class="px-4 py-5 border-b border-t dark:border-gray-700 border-gray-200 sm:px-6 flex justify-between" v-if="Object.keys(currentLog.request.post).length > 0">
-                        <h3 class="text-lg leading-6 font-medium dark:text-gray-100 text-gray-900">
-                            Post Parameters
-                        </h3>
+                    <div class="px-4 py-5 border-b border-t dark:border-gray-700 border-gray-200 sm:px-6 flex justify-between items-center" v-if="Object.keys(currentLog.request.post).length > 0">
+                        <div class="flex">
+                            <svg
+                                v-if="postParametersVisible"
+                                @click="setPostParametersVisible(false)"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cursor-pointer w-6 h-6 mr-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                            <svg
+                                v-if="! postParametersVisible"
+                                @click="setPostParametersVisible(true)"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cursor-pointer w-6 h-6 mr-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                            <h3 class="text-lg leading-6 font-medium dark:text-gray-100 text-gray-900">
+                                Post Parameters
+                            </h3>
+                        </div>
                         <span class="inline-flex rounded-md shadow-sm ml-4">
                             <button
                                 type="button"
@@ -372,7 +415,9 @@
                             </button>
                         </span>
                     </div>
-                    <div v-for="parameter in currentLog.request.post"
+                    <div
+                        v-if="postParametersVisible"
+                        v-for="parameter in currentLog.request.post"
                          :key="'post_' + parameter.name"
                          class="even:bg-gray-50 bg-gray-50 dark:even:bg-gray-700 dark:bg-gray-800 px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                         <dt class="text-sm leading-5 font-medium dark:text-gray-200 text-gray-700">
@@ -385,10 +430,25 @@
                         </dd>
                     </div>
 
-                    <div class="px-4 py-5 border-b border-t dark:border-gray-700 border-gray-200 sm:px-6 flex justify-between">
-                        <h3 class="text-lg leading-6 font-medium dark:text-gray-100 text-gray-900">
-                            Headers
-                        </h3>
+                    <div class="px-4 py-5 border-b border-t dark:border-gray-700 border-gray-200 sm:px-6 flex justify-between items-center">
+                        <div class="flex">
+                            <svg
+                                v-if="requestHeadersVisible"
+                                @click="setRequestHeadersVisible(false)"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cursor-pointer w-6 h-6 mr-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                            <svg
+                                v-if="! requestHeadersVisible"
+                                @click="setRequestHeadersVisible(true)"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cursor-pointer w-6 h-6 mr-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+
+                            <h3 class="text-lg leading-6 font-medium dark:text-gray-100 text-gray-900">
+                                Headers
+                            </h3>
+                        </div>
                         <span class="inline-flex rounded-md shadow-sm ml-4">
                             <button
                                 type="button"
@@ -397,7 +457,9 @@
                             </button>
                         </span>
                     </div>
-                    <div v-for="(value, header) in currentLog.request.headers"
+                    <div
+                            v-if="requestHeadersVisible && currentLog.request"
+                            v-for="(value, header) in currentLog.request.headers"
                          :key="header"
                          class="even:bg-gray-50 bg-gray-50 dark:even:bg-gray-700 dark:bg-gray-800 px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                         <dt class="text-sm leading-5 font-medium dark:text-gray-200 text-gray-700">
@@ -408,23 +470,67 @@
                         </dd>
                     </div>
 
-                    <div class="px-4 py-5 border-b border-t dark:border-gray-700 border-gray-200 sm:px-6">
+                    <div class="px-4 py-5 border-b border-t dark:border-gray-700 border-gray-200 sm:px-6 flex justify-between items-center">
                         <h3 class="text-lg leading-6 font-medium dark:text-gray-100 text-gray-900">
                             Request Body
                         </h3>
+                        <span class="inline-flex rounded-md shadow-sm ml-4">
+                            <button
+                                :data-clipboard-text="currentLog.request.body"
+                                type="button"
+                                class="dark:bg-gray-800 dark:text-pink-500 dark:border-pink-500 clipboard-request-body inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs leading-4 font-medium rounded text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150">
+                                Copy
+                            </button>
+                        </span>
                     </div>
                     <div>
-                        <pre class="p-6 prettyprint break-all whitespace-pre-wrap">@{ currentLog.request.body }</pre>
+                        <json-viewer
+                            v-if="requestIsJson()"
+                            :expand-depth="2"
+                            :value="JSON.parse(currentLog.request.body)"
+                        ></json-viewer>
+                        <pre
+                            v-else
+                            class="p-6 prettyprint break-all whitespace-pre-wrap">@{ currentLog.request.body }</pre>
                     </div>
                 </div>
 
-                <div v-if="view === 'response'">
+                <div
+                    v-if="! sideBySide"
+                     class="border-b border-t border-gray-200 dark:border-gray-700">
+                    <nav class="-mb-px flex">
+                        <a href="#"
+                           class="flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm leading-5 focus:outline-none dark:bg-gray-900 dark:border-pink-500 border-indigo-500 dark:text-pink-500 text-indigo-600 dark:focus:text-pink-400 focus:text-indigo-800 dark:focus:border-pink-400 focus:border-indigo-700">
+                            Response
+                        </a>
+                    </nav>
+                </div>
+
+                <div v-if="view === 'response' || ! sideBySide">
                     <div class="px-4 py-5 border-b dark:border-gray-700 border-gray-200 sm:px-6">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
-                            Headers
-                        </h3>
+                        <div class="flex">
+
+                            <svg
+                                v-if="responseHeadersVisible"
+                                @click="setResponseHeadersVisible(false)"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cursor-pointer w-6 h-6 mr-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                            </svg>
+                            <svg
+                                v-if="! responseHeadersVisible"
+                                @click="setResponseHeadersVisible(true)"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="cursor-pointer w-6 h-6 mr-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+                                Headers
+                            </h3>
+                        </div>
                     </div>
-                    <div v-for="(value, header) in currentLog.response.headers"
+                    <div
+                        v-if="responseHeadersVisible"
+                        v-for="(value, header) in responseHeaders"
                          :key="header"
                          class="even:bg-gray-50 odd:bg-gray-50 dark:even:bg-gray-700 dark:odd:bg-gray-800 px-4 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                         <dt class="text-sm leading-5 font-medium dark:text-gray-200 text-gray-700">
@@ -453,32 +559,46 @@
                     </div>
 
                     <div class="px-4 py-5 border-b border-t dark:border-gray-700 border-gray-200 sm:px-6">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 flex justify-between">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 flex justify-between items-center">
                             <span>Response</span>
                             <nav class="flex">
-                                <a href="#"
-                                   @click.prevent="setActiveTab('raw')"
-                                   :class="{'outline-none text-white bg-pink-500': activeTab === 'raw'}"
-                                   class="px-3 py-2 font-medium text-sm leading-5 rounded-md text-gray-500 hover:text-gray-700 dark:hover:text-gray-100">
-                                    Raw
-                                </a>
-                                <a href="#"
-                                   @click.prevent="setActiveTab('preview')"
-                                   :class="{'outline-none text-white bg-pink-500': activeTab === 'preview'}"
-                                   class="ml-4 px-3 py-2 font-medium text-sm leading-5 rounded-md text-gray-500 hover:text-gray-100 focus:outline-nonedark:hover:text-gray-100">
-                                    Preview
-                                </a>
+                                <template v-if="! responseIsJson()">
+                                    <a href="#"
+                                       @click.prevent="setActiveTab('raw')"
+                                       :class="{'outline-none text-white bg-pink-500': activeTab === 'raw'}"
+                                       class="px-3 py-2 font-medium text-sm leading-5 rounded-md text-gray-500 hover:text-gray-700 dark:hover:text-gray-100">
+                                        Raw
+                                    </a>
+                                    <a href="#"
+                                       @click.prevent="setActiveTab('preview')"
+                                       :class="{'outline-none text-white bg-pink-500': activeTab === 'preview'}"
+                                       class="ml-4 px-3 py-2 font-medium text-sm leading-5 rounded-md text-gray-500 hover:text-gray-100 focus:outline-nonedark:hover:text-gray-100">
+                                        Preview
+                                    </a>
+                                </template>
+                                <span class="inline-flex rounded-md shadow-sm ml-4">
+                                    <button
+                                        type="button"
+                                        class="dark:bg-gray-800 dark:text-pink-500 dark:border-pink-500 clipboard-response-body inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs leading-4 font-medium rounded text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150">
+                                        Copy
+                                    </button>
+                                </span>
                             </nav>
                         </h3>
                     </div>
-                    <div v-if="activeTab === 'raw'">
-                        <pre class="p-6 text-sm whitespace-pre-wrap break-all">@{ currentLog.response.body }</pre>
+                    <div v-if="activeTab === 'raw' && currentLog.response">
+                        <json-viewer
+                            v-if="responseIsJson()"
+                            :expand-depth="2"
+                            :value="JSON.parse(currentLog.response.body)"
+                        ></json-viewer>
+
+                        <pre
+                            v-else
+                             class="p-6 text-sm whitespace-pre-wrap break-all">@{ currentLog.response.body }</pre>
                     </div>
                     <div v-if="activeTab === 'preview'">
-                        <div v-if="responseIsJson()">
-                            <pre><span id="jsonResponseBody" class="json"></span></pre>
-                        </div>
-                        <iframe v-else :srcdoc="currentLog.response.body" style="height: 500px;" class="w-full h-full"></iframe>
+                        <iframe :srcdoc="currentLog.response.body" style="height: 500px;" class="w-full h-full"></iframe>
                     </div>
                 </div>
             </div>
@@ -492,6 +612,8 @@
 </div>
 
 <script>
+    Vue.use(JsonView.default)
+
     new Vue({
         el: '#app',
 
@@ -505,8 +627,12 @@
             logs: [],
             maxLogs: {{ max_logs }},
             highlightNextLog: false,
-            followLogs: true,
-            useDarkMode: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
+            followLogs: window.localStorage.getItem('followLogs') !== null ? window.localStorage.getItem('followLogs') === 'true' : true,
+            sideBySide: window.localStorage.getItem('sideBySide') === 'true',
+            useDarkMode: window.localStorage.getItem('useDarkMode') !== null ? window.localStorage.getItem('useDarkMode') === 'true' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches),
+            postParametersVisible: window.localStorage.getItem('postParametersVisible') !== null ? window.localStorage.getItem('postParametersVisible') === 'true' : true,
+            requestHeadersVisible: window.localStorage.getItem('requestHeadersVisible') !== null ? window.localStorage.getItem('requestHeadersVisible') === 'true' : true,
+            responseHeadersVisible: window.localStorage.getItem('responseHeadersVisible') !== null ? window.localStorage.getItem('responseHeadersVisible') === 'true' : true,
         },
 
         watch: {
@@ -514,8 +640,10 @@
                 handler: function(value) {
                     if (value) {
                         document.querySelector('html').classList.add('dark')
+                        window.localStorage.setItem('useDarkMode', 'true')
                     } else {
                         document.querySelector('html').classList.remove('dark')
+                        window.localStorage.setItem('useDarkMode', 'false')
                     }
                 },
                 immediate: true,
@@ -528,6 +656,15 @@
                     return log.id === this.currentLogId;
                 });
             },
+
+            responseHeaders: function() {
+                if (this.currentLog && this.currentLog.response) {
+                    return this.currentLog.response.headers;
+                }
+
+                return [];
+            },
+
             filteredLogs: function() {
                 if (this.search === '') {
                     return this.logs;
@@ -539,30 +676,66 @@
         },
 
         methods: {
+            setFollowLogs: function(value) {
+                this.followLogs = value;
+                window.localStorage.setItem('followLogs', value);
+            },
+
+            setSideBySide: function(value) {
+                this.sideBySide = value;
+                window.localStorage.setItem('sideBySide', value);
+            },
+
+            setPostParametersVisible: function(value) {
+                this.postParametersVisible = value;
+                window.localStorage.setItem('postParametersVisible', value);
+            },
+
+            setRequestHeadersVisible: function(value) {
+                this.requestHeadersVisible = value;
+                window.localStorage.setItem('requestHeadersVisible', value);
+            },
+
+            setResponseHeadersVisible: function(value) {
+                this.responseHeadersVisible = value;
+                window.localStorage.setItem('responseHeadersVisible', value);
+            },
+
             setActiveTab: function(tab) {
                 this.activeTab = tab;
-                this.$nextTick(function () {
-                  this.formatJsonResponse();
-                });
             },
+
             clearLogs: function() {
                 fetch('/api/logs/clear');
                 this.logs = []
                 this.currentLog = null;
             },
-            formatJsonResponse: function () {
-                if (this.view === 'response' && this.activeTab === 'preview' && this.responseIsJson()) {
-                    const target = document.getElementById('jsonResponseBody');
-                    target.innerText = JSON.stringify(JSON.parse(this.currentLog.response.body), null, 2)
-                    hljs.highlightBlock(target);
+
+            responseIsJson: function() {
+                if (! this.currentLog || ! this.currentLog.response || ! this.currentLog.response.headers) {
+                    return false;
+                }
+
+                let hasContentType = /application\/json/g.test(this.currentLog.response.headers['Content-Type']);
+                try {
+                    JSON.parse(this.currentLog.response.body);
+                    return hasContentType;
+                } catch (e) {
+                    return false;
                 }
             },
-            responseIsJson: function() {
-              if (! this.currentLog || ! this.currentLog.response || ! this.currentLog.response.headers) {
-                return false;
-              }
+            requestIsJson: function() {
+                if (! this.currentLog || ! this.currentLog.request || ! this.currentLog.request.headers) {
+                    return false;
+                }
 
-              return /application\/json/g.test(this.currentLog.response.headers['Content-Type']);
+                let hasContentType = /application\/json/g.test(this.currentLog.request.headers['Content-Type']);
+                try {
+                    JSON.parse(this.currentLog.request.body);
+                    return hasContentType;
+                } catch (e) {
+                    return false;
+                }
             },
             toPhpArray: function(rows, variableName) {
                 let output = `$${variableName} = [\n`;
@@ -583,14 +756,12 @@
             },
             setLog: function (id) {
                 this.currentLogId = id;
-                this.formatJsonResponse();
 
                 let url = new URL(window.location);
                 url.hash = id;
                 window.history.pushState({}, '', url);
 
                 this.$nextTick(function () {
-                    this.formatJsonResponse()
                     new ClipboardJS('.clipboard');
 
                     new ClipboardJS('.clipboard-query', {
@@ -608,6 +779,18 @@
                     new ClipboardJS('.clipboard-headers', {
                         text: (trigger) => {
                             return this.toPhpArray(this.currentLog.request.headers, 'headers');
+                        }
+                    });
+
+                    new ClipboardJS('.clipboard-request-body', {
+                        text: (trigger) => {
+                            return this.currentLog.request.body;
+                        }
+                    });
+
+                    new ClipboardJS('.clipboard-response-body', {
+                        text: (trigger) => {
+                            return this.currentLog.response.body;
                         }
                     });
                 });

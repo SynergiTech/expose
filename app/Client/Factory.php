@@ -7,6 +7,7 @@ use App\Client\Http\Controllers\AttachDataToLogController;
 use App\Client\Http\Controllers\ClearLogsController;
 use App\Client\Http\Controllers\CreateTunnelController;
 use App\Client\Http\Controllers\DashboardController;
+use App\Client\Http\Controllers\GetTunnelsController;
 use App\Client\Http\Controllers\LogController;
 use App\Client\Http\Controllers\PushLogsToDashboardController;
 use App\Client\Http\Controllers\ReplayLogController;
@@ -27,6 +28,9 @@ class Factory
 
     /** @var string */
     protected $auth = '';
+
+    /** @var string */
+    protected $basicAuth;
 
     /** @var \React\EventLoop\LoopInterface */
     protected $loop;
@@ -67,6 +71,13 @@ class Factory
         return $this;
     }
 
+    public function setBasicAuth(?string $basicAuth)
+    {
+        $this->basicAuth = $basicAuth;
+
+        return $this;
+    }
+
     public function setLoop(LoopInterface $loop)
     {
         $this->loop = $loop;
@@ -77,7 +88,7 @@ class Factory
     protected function bindConfiguration()
     {
         app()->singleton(Configuration::class, function ($app) {
-            return new Configuration($this->host, $this->port, $this->auth);
+            return new Configuration($this->host, $this->port, $this->auth, $this->basicAuth);
         });
     }
 
@@ -133,6 +144,7 @@ class Factory
     {
         $this->router->get('/', DashboardController::class);
 
+        $this->router->get('/api/tunnels', GetTunnelsController::class);
         $this->router->post('/api/tunnel', CreateTunnelController::class);
         $this->router->get('/api/logs', LogController::class);
         $this->router->post('/api/logs', PushLogsToDashboardController::class);

@@ -5,16 +5,17 @@ namespace App\Client\Http;
 use App\Client\Configuration;
 use App\Client\Http\Modifiers\CheckBasicAuthentication;
 use App\Logger\RequestLogger;
-use Clue\React\Buzz\Browser;
 use GuzzleHttp\Psr7\Message;
-use function GuzzleHttp\Psr7\parse_request;
 use Laminas\Http\Request;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ratchet\Client\WebSocket;
 use Ratchet\RFC6455\Messaging\Frame;
 use React\EventLoop\LoopInterface;
+use React\Http\Browser;
 use React\Socket\Connector;
+
+use function GuzzleHttp\Psr7\parse_request;
 
 class HttpClient
 {
@@ -84,37 +85,43 @@ class HttpClient
 
     protected function sendRequestToApplication(RequestInterface $request, $proxyConnection = null)
     {
+        $uri = $request->getUri();
+
+        if ($this->configuration->isSecureSharedUrl()) {
+            $uri = $uri->withScheme('https');
+        }
+
         (new Browser($this->loop, $this->createConnector()))
             ->withFollowRedirects(false)
             ->withRejectErrorResponse(false)
             ->requestStreaming(
                 $request->getMethod(),
-                $request->getUri(),
+                $uri,
                 $request->getHeaders(),
                 $request->getBody()
             )
             ->then(function (ResponseInterface $response) use ($proxyConnection) {
-                if (! isset($response->buffer)) {
-                    $response = $this->rewriteResponseHeaders($response);
+                $response = $this->rewriteResponseHeaders($response);
 
-                    $response->buffer = Message::toString($response);
-                }
+                $response = $response->withoutHeader('Transfer-Encoding');
 
-                $this->sendChunkToServer($response->buffer, $proxyConnection);
+                $responseBuffer = Message::toString($response);
+
+                $this->sendChunkToServer($responseBuffer, $proxyConnection);
 
                 /* @var $body \React\Stream\ReadableStreamInterface */
                 $body = $response->getBody();
 
                 $this->logResponse(Message::toString($response));
 
-                $body->on('data', function ($chunk) use ($proxyConnection, $response) {
-                    $response->buffer .= $chunk;
+                $body->on('data', function ($chunk) use ($proxyConnection, &$responseBuffer) {
+                    $responseBuffer .= $chunk;
 
                     $this->sendChunkToServer($chunk, $proxyConnection);
                 });
 
-                $body->on('close', function () use ($proxyConnection, $response) {
-                    $this->logResponse($response->buffer);
+                $body->on('close', function () use ($proxyConnection, &$responseBuffer) {
+                    $this->logResponse($responseBuffer);
 
                     optional($proxyConnection)->close();
                 });

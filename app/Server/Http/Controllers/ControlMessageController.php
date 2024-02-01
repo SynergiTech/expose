@@ -14,8 +14,9 @@ use Ratchet\ConnectionInterface;
 use Ratchet\WebSocket\MessageComponentInterface;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use function React\Promise\reject;
 use stdClass;
+
+use function React\Promise\reject;
 
 class ControlMessageController implements MessageComponentInterface
 {
@@ -223,16 +224,19 @@ class ControlMessageController implements MessageComponentInterface
             return;
         }
 
-        $connection->send(json_encode([
-            'event' => 'authenticated',
-            'data' => [
-                'message' => config('expose.admin.messages.resolve_connection_message')($connectionInfo, $user),
-                'user' => $user,
-                'port' => $connectionInfo->port,
-                'shared_port' => $connectionInfo->shared_port,
-                'client_id' => $connectionInfo->client_id,
-            ],
-        ]));
+        $this->resolveConnectionMessage($connectionInfo, $user)
+            ->then(function ($connectionInfo) use ($connection, $user) {
+                $connection->send(json_encode([
+                    'event' => 'authenticated',
+                    'data' => [
+                        'message' => $connectionInfo->message,
+                        'user' => $user,
+                        'port' => $connectionInfo->port,
+                        'shared_port' => $connectionInfo->shared_port,
+                        'client_id' => $connectionInfo->client_id,
+                    ],
+                ]));
+            });
     }
 
     protected function registerProxy(ConnectionInterface $connection, $data)

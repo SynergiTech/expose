@@ -6,11 +6,12 @@ use App\Client\Connections\ControlConnection;
 use App\Logger\CliRequestLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
-use function Ratchet\Client\connect;
 use Ratchet\Client\WebSocket;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
+
+use function Ratchet\Client\connect;
 
 class Client
 {
@@ -71,9 +72,14 @@ class Client
 
         $url = Arr::get($parsedUrl, 'host', Arr::get($parsedUrl, 'path'));
 
-        if (Arr::get($parsedUrl, 'scheme') === 'https') {
+        $isHttps = Arr::get($parsedUrl, 'scheme') === 'https';
+
+        $this->configuration->setIsSecureSharedUrl($isHttps);
+
+        if ($isHttps && is_null(Arr::get($parsedUrl, 'port'))) {
             $url .= ':443';
         }
+
         if (! is_null($port = Arr::get($parsedUrl, 'port'))) {
             $url .= ":{$port}";
         }

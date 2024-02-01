@@ -4,13 +4,14 @@ namespace Tests\Unit;
 
 use App\Logger\CliRequestLogger;
 use App\Logger\RequestLogger;
-use Clue\React\Buzz\Browser;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
-use function GuzzleHttp\Psr7\str;
 use Laminas\Http\Request as LaminasRequest;
 use Mockery as m;
+use React\Http\Browser;
 use Tests\TestCase;
+
+use function GuzzleHttp\Psr7\str;
 
 class RequestLoggerTest extends TestCase
 {

@@ -16,13 +16,21 @@ class Configuration
     /** @var string|null */
     protected $auth;
 
-    public function __construct(string $host, int $port, ?string $auth = null)
+    /** @var string|null */
+    protected $basicAuth;
+
+    /** @var bool */
+    protected $isSecureSharedUrl = false;
+
+    public function __construct(string $host, int $port, ?string $auth = null, ?string $basicAuth = null)
     {
         $this->serverHost = $this->host = $host;
 
         $this->port = $port;
 
         $this->auth = $auth;
+
+        $this->basicAuth = $basicAuth;
     }
 
     public function host(): string
@@ -45,6 +53,11 @@ class Configuration
         return $this->auth;
     }
 
+    public function basicAuth(): ?string
+    {
+        return $this->basicAuth;
+    }
+
     public function port(): int
     {
         return intval($this->port);
@@ -60,5 +73,15 @@ class Configuration
         }
 
         return "{$subdomain}.{$host}";
+    }
+
+    public function isSecureSharedUrl(): bool
+    {
+        return $this->isSecureSharedUrl;
+    }
+
+    public function setIsSecureSharedUrl($value)
+    {
+        $this->isSecureSharedUrl = $value;
     }
 }
