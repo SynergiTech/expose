@@ -324,7 +324,7 @@ class Factory
         });
 
         app()->singleton(StatisticsCollector::class, function () {
-            return app(DatabaseStatisticsCollector::class);
+            return app(config('expose.admin.statistics.collector', DatabaseStatisticsCollector::class));
         });
 
         $intervalInSeconds = config('expose.admin.statistics.interval_in_seconds', 3600);
