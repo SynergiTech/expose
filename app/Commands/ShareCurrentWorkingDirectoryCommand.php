@@ -2,6 +2,10 @@
 
 namespace App\Commands;
 
+use App\Client\Factory;
+use React\EventLoop\LoopInterface;
+use function Clue\React\Block\await;
+
 class ShareCurrentWorkingDirectoryCommand extends ShareCommand
 {
     protected $signature = 'share-cwd {host?} {--subdomain=} {--auth=} {--basicAuth=} {--dns=} {--domain=}';
@@ -13,7 +17,7 @@ class ShareCurrentWorkingDirectoryCommand extends ShareCommand
         $this->input->setArgument('host', 'localhost');
 
         if (! $this->option('subdomain')) {
-            $this->input->setOption('subdomain', str_replace('.', '-', $folderName));
+            $this->input->setOption('subdomain', strtolower(str_replace(['.', ' '], '-', $folderName)));
         }
 
         parent::handle();
@@ -21,6 +25,23 @@ class ShareCurrentWorkingDirectoryCommand extends ShareCommand
 
     protected function detectName(): string
     {
-        return get_current_user() . '-' . basename(getcwd());
+        $auth = $this->option('auth') ?? config('expose.auth_token', '');
+
+        (new Factory())
+            ->setLoop(app(LoopInterface::class))
+            ->setHost($this->getServerHost())
+            ->setPort($this->getServerPort())
+            ->setAuth($auth)
+            ->createClient();
+
+        try {
+            await(app('expose.client')->getUsernameForAuthToken($this->getServerPort(), $auth));
+        } catch (\Throwable $e) {
+            if ($e->getMessage() !== 'Closed') {
+                throw $e;
+            }
+        }
+
+        return cache()->get('expose_username', get_current_user()) . '-' . basename(getcwd());
     }
 }
