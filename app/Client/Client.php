@@ -179,6 +179,7 @@ class Client
                 $connection->authenticateTcp($port);
 
                 $connection->on('authenticationFailed', function ($data) use ($clientConnection, $deferred) {
+                    cache()->forget('expose_username');
                     $this->logger->error($data->message);
                     $clientConnection->close();
                     $deferred->reject(new \Exception('Closed'));
@@ -199,6 +200,7 @@ class Client
                     return;
                 }
 
+                cache()->forget('expose_username');
                 $this->logger->error('Could not connect to the server.');
                 $this->logger->error($e->getMessage());
 
