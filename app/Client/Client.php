@@ -160,6 +160,56 @@ class Client
         return $promise;
     }
 
+    public function getUsernameForAuthToken(int $port, $authToken = ''): PromiseInterface
+    {
+        $deferred = new Deferred();
+        $promise = $deferred->promise();
+
+        $wsProtocol = $this->configuration->port() === 443 ? 'wss' : 'ws';
+        $exposeVersion = config('app.version');
+
+        connect($wsProtocol."://{$this->configuration->host()}:{$this->configuration->port()}/expose/control?authToken={$authToken}&version={$exposeVersion}", [], [
+            'X-Expose-Control' => 'enabled',
+        ], $this->loop)
+            ->then(function (WebSocket $clientConnection) use ($port, $deferred, $authToken) {
+                $this->connectionRetries = 0;
+
+                $connection = ControlConnection::create($clientConnection);
+
+                $connection->authenticateTcp($port);
+
+                $connection->on('authenticationFailed', function ($data) use ($clientConnection, $deferred) {
+                    cache()->forget('expose_username');
+                    $this->logger->error($data->message);
+                    $clientConnection->close();
+                    $deferred->reject(new \Exception('Closed'));
+                });
+
+                return $connection->on('authenticated', function ($data) use ($clientConnection, $deferred) {
+                    cache()->put('expose_username', $data->user->name ?? null);
+                    $clientConnection->close();
+                    $deferred->reject(new \Exception('Closed'));
+                });
+
+            }, function (\Exception $e) use ($deferred, $port, $authToken) {
+                if ($this->connectionRetries > 0) {
+                    $this->retryConnectionOrExit(function () use ($port, $authToken) {
+                        $this->getUsernameForAuthToken($port, $authToken);
+                    });
+
+                    return;
+                }
+
+                cache()->forget('expose_username');
+                $this->logger->error('Could not connect to the server.');
+                $this->logger->error($e->getMessage());
+
+                $this->exit($deferred);
+            });
+
+        return $promise;
+    }
+
     public function connectToServerAndShareTcp(int $port, $authToken = ''): PromiseInterface
     {
         $deferred = new Deferred();
